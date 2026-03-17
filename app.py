@@ -15,7 +15,7 @@ from presets.brand_styles import BRAND_PRESETS
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Nexus Fashion Generator",
+    page_title="FLUX Fashion Generator",
     page_icon="✦",
     layout="wide",
 )
@@ -36,7 +36,7 @@ if not fal_key:
 os.environ["FAL_KEY"] = fal_key
 
 # ── Header ────────────────────────────────────────────────────────────────────
-st.title("Nexus Fashion Generator")
+st.title("FLUX Fashion Generator")
 st.caption("Brand-style clothing generation powered by FLUX")
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────

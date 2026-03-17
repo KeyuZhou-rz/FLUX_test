@@ -2,14 +2,14 @@ from presets.brand_styles import BRAND_PRESETS
 
 
 def build_prompt(
-    brand_style: str,
-    garment_description: str,
+    brand_style: str, # name of targeted brand: eg. Nike, lululemon etc.
+    garment_description: str, 
     style_modifiers: list[str] | None = None,
 ) -> str:
     if not garment_description or not garment_description.strip():
         raise ValueError("Garment description cannot be empty.")
 
-    preset = BRAND_PRESETS.get(brand_style)
+    preset = BRAND_PRESETS.get(brand_style) # Find brand_style in BRAND_PRESETS
 
     if preset is not None and brand_style != "Custom":
         tokens = ", ".join(preset["style_tokens"])
@@ -20,16 +20,16 @@ def build_prompt(
     parts = [
         garment_description.strip(),
         style_part,
-        "fashion editorial photography",
-        "studio lighting",
-        "white background",
+        "sketch style with outline only",
+        "light grey studio background",
         "full garment visible",
-        "high quality",
+        "high contrast",
+        "garment clearly visible",
         "detailed fabric texture",
     ]
 
     if style_modifiers:
-        parts[1:1] = style_modifiers
+        parts[1:1] = style_modifiers # insert modifiers between garment_description & style_part
 
     prompt = ", ".join(parts)
 

@@ -5,7 +5,7 @@ import fal_client
 def generate_image(
     prompt: str,
     loras: list[dict],
-    image_size: str = "portrait_4_3",
+    image_size: str | dict = {"width":1024, "height":1280},
     num_inference_steps: int = 28,
     guidance_scale: float = 3.5,
     seed: int | None = None,
@@ -35,5 +35,8 @@ def generate_image(
     images = result.get("images", [])
     if not images:
         raise RuntimeError("fal.ai returned no images.")
+    
+    image_info = result["images"][0]
+    print(f"[generator] actual size: {image_info.get('width')}x{image_info.get('height')}")
 
-    return images[0]["url"]
+    return image_info["url"]
