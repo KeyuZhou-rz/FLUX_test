@@ -1,0 +1,19 @@
+brand_style = "Chanel"
+garment_description = "collarless boucle jacket in cream with black trim and gold button closure"
+
+brand_style = "GAP"
+garment_description = "classic fit crewneck sweatshirt in heather grey with ribbed cuffs and hem"
+
+brand_style = "Lululemon"
+garment_description = "sports bra in deep navy blue with mesh cutout back panel and cross-back straps"
+
+# 测试Custom品牌（绕过preset逻辑）
+brand_style = "Custom"
+garment_description = "minimalist Japanese workwear jacket with sashiko stitching and indigo dye"
+
+garment_description = "zip-up jacket with front pockets and long sleeves"
+
+brand_style = "Lululemon"  # 期望：哑光运动面料，修身版型，功能性细节
+brand_style = "GAP"         # 期望：棉质或混纺，宽松休闲，简洁线条
+brand_style = "Chanel"      # 期望：精纺面料，结构化，奢华细节
+

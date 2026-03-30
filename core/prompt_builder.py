@@ -18,14 +18,12 @@ def build_prompt(
         style_part = f"{brand_style} aesthetic" if brand_style else "fashion aesthetic"
 
     parts = [
-        garment_description.strip(),
         style_part,
-        "sketch style with outline only",
+        garment_description.strip(),
+        "fashion design illustration, clean rendering",
+        "uniform color palette",
         "light grey studio background",
         "full garment visible",
-        "high contrast",
-        "garment clearly visible",
-        "detailed fabric texture",
     ]
 
     if style_modifiers:
