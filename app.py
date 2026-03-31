@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from core.generator import generate_image
-from core.prompt_builder import build_prompt, get_negative_prompt
+from core.prompt_builder import build_prompt, get_negative_prompt, DISPLAY_MODES
 from core.lora_config import LORA_PRESETS
 from presets.brand_styles import BRAND_PRESETS
 
@@ -52,6 +52,17 @@ with st.sidebar:
             "Custom style description",
             placeholder="e.g. minimalist Scandinavian streetwear",
         )
+
+    st.markdown("---")
+    st.header("展示模式")
+    display_mode_keys = list(DISPLAY_MODES.keys())
+    display_mode_labels = [DISPLAY_MODES[k]["label"] for k in display_mode_keys]
+    selected_display_label = st.radio(
+        "选择展示模式",
+        display_mode_labels,
+        index=0,
+    )
+    selected_display_mode = display_mode_keys[display_mode_labels.index(selected_display_label)]
 
     st.markdown("---")
     st.metric("Images generated", st.session_state.generation_count)
@@ -117,6 +128,7 @@ if generate_clicked:
             prompt = build_prompt(
                 brand_style=brand_style_value,
                 garment_description=garment_desc,
+                display_mode=selected_display_mode,
             )
         except ValueError as e:
             st.warning(str(e))

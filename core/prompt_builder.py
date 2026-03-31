@@ -1,10 +1,43 @@
 from presets.brand_styles import BRAND_PRESETS
 
 
+# Display mode prompt fragments
+DISPLAY_MODES = {
+    "product": {
+        "label": "产品图 (Product Shot)",
+        "suffixes": [
+            "fashion design illustration, clean rendering",
+            "uniform color palette",
+            "light grey studio background",
+            "full garment visible",
+        ],
+    },
+    "on_model": {
+        "label": "模特上身 (On Model)",
+        "suffixes": [
+            "worn by a fashion model, full body shot",
+            "editorial lookbook photography, studio lighting",
+            "natural pose, clean background",
+            "high quality, detailed fabric texture",
+        ],
+    },
+    "flat_sketch": {
+        "label": "款式平面图 (Technical Flat)",
+        "suffixes": [
+            "fashion technical flat sketch, garment flat lay",
+            "front view, clean line drawing",
+            "white background, no model, no shadow",
+            "apparel design blueprint, vector style illustration",
+        ],
+    },
+}
+
+
 def build_prompt(
     brand_style: str, # name of targeted brand: eg. Nike, lululemon etc.
-    garment_description: str, 
+    garment_description: str,
     style_modifiers: list[str] | None = None,
+    display_mode: str = "product",
 ) -> str:
     if not garment_description or not garment_description.strip():
         raise ValueError("Garment description cannot be empty.")
@@ -17,13 +50,12 @@ def build_prompt(
     else:
         style_part = f"{brand_style} aesthetic" if brand_style else "fashion aesthetic"
 
+    mode_config = DISPLAY_MODES.get(display_mode, DISPLAY_MODES["product"])
+
     parts = [
         style_part,
         garment_description.strip(),
-        "fashion design illustration, clean rendering",
-        "uniform color palette",
-        "light grey studio background",
-        "full garment visible",
+        *mode_config["suffixes"],
     ]
 
     if style_modifiers:
