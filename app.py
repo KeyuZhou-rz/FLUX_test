@@ -11,6 +11,7 @@ load_dotenv()
 from core.generator import generate_image
 from core.prompt_builder import build_prompt, get_negative_prompt, DISPLAY_MODES
 from core.lora_config import LORA_PRESETS
+from core.qwen_visionapi import extract_garment_description
 from presets.brand_styles import BRAND_PRESETS
 
 # ── Page config ───────────────────────────────────────────────────────────────
@@ -27,6 +28,10 @@ if "last_prompt" not in st.session_state:
     st.session_state.last_prompt = ""
 if "generation_count" not in st.session_state:
     st.session_state.generation_count = 0
+if "sketch_image" not in st.session_state:
+    st.session_state.sketch_image = None
+if "sketch_description" not in st.session_state:
+    st.session_state.sketch_description = ""
 
 # ── FAL_KEY check ─────────────────────────────────────────────────────────────
 fal_key = os.getenv("FAL_KEY")
@@ -41,6 +46,39 @@ st.caption("Brand-style clothing generation powered by FLUX")
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
+    st.header("Sketch Upload")
+    sketch_file = st.file_uploader(
+        "Upload a sketch or technical flat",
+        type=["png", "jpg", "jpeg"],
+        help="Upload a garment sketch/flat lay image for analysis"
+    )
+
+    if sketch_file:
+        st.session_state.sketch_image = sketch_file.getvalue()
+
+        # Show uploaded image preview
+        st.image(sketch_file, caption="Uploaded sketch", use_column_width=True)
+
+        # Extract description if not already done
+        if not st.session_state.sketch_description:
+            with st.spinner("Analyzing sketch..."):
+                try:
+                    st.session_state.sketch_description = extract_garment_description(
+                        st.session_state.sketch_image
+                    )
+                    st.success("Sketch analyzed!")
+                except Exception as e:
+                    st.error(f"Failed to analyze sketch: {e}")
+
+        # Show extracted description
+        if st.session_state.sketch_description:
+            with st.expander("Extracted Description", expanded=True):
+                st.write(st.session_state.sketch_description)
+    else:
+        st.session_state.sketch_image = None
+        st.session_state.sketch_description = ""
+
+    st.markdown("---")
     st.header("Brand Style")
 
     brand_names = list(BRAND_PRESETS.keys())
@@ -85,8 +123,11 @@ col_left, col_right = st.columns([0.6, 0.4])
 
 with col_left:
     st.subheader("Garment Description")
+    # Use extracted description from sketch if available, otherwise empty
+    initial_desc = st.session_state.sketch_description if st.session_state.sketch_description else ""
     garment_desc = st.text_area(
         label="Describe the garment",
+        value=initial_desc,
         placeholder=(
             "A fitted blazer with structured shoulders, "
             "single-button closure, and contrast stitching"
@@ -148,6 +189,7 @@ if generate_clicked:
                         num_inference_steps=steps,
                         guidance_scale=guidance,
                         seed=seed,
+                        sketch_image=st.session_state.sketch_image,
                     )
                     st.session_state.last_image_url = url
                     st.session_state.generation_count += 1
