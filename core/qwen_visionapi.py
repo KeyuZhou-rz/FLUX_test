@@ -1,6 +1,7 @@
 import os
 import base64
-from typing import Union
+import json
+from typing import Union, Dict
 from pathlib import Path
 from dotenv import load_dotenv
 import requests
@@ -8,15 +9,15 @@ import requests
 load_dotenv()
 
 
-def extract_garment_description(image_input: Union[str, bytes]) -> str:
+def extract_garment_description(image_input: Union[str, bytes]) -> Dict[str, str]:
     """
-    Extract garment description from a sketch image using Qwen's vision API.
+    Extract structured garment features from a sketch image using Qwen's vision API.
 
     Args:
         image_input: Either a file path (str) or raw image bytes
 
     Returns:
-        Garment description extracted from the image
+        Dict with keys: silhouette, color, fabric, details, mood
     """
     api_key = os.getenv("QWEN_API_KEY")
     if not api_key:
@@ -50,11 +51,20 @@ def extract_garment_description(image_input: Union[str, bytes]) -> str:
                         },
                         {
                             "type": "text",
-                            "text": """Describe this fashion technical flat in one concise paragraph.
-Focus only on: garment type, silhouette, waist height, leg width,
-pocket details, closure type, fabric texture, color.
-Do not mention the illustration style.
-Write as if describing a real garment for a product listing."""
+                            "text": """This is a hand-drawn fashion sketch. Analyze the DESIGN INTENT of this garment, NOT the drawing technique.
+
+IMPORTANT: Ignore all sketch rendering artifacts such as crosshatching, diagonal shading lines, pencil strokes, hatching patterns, or stippling. These are drawing techniques, NOT fabric textures. Describe the intended real-world fabric and texture instead.
+
+For each dimension, provide 2-5 English phrases separated by commas:
+
+1. SILHOUETTE: Length, sleeve length, cut, shoulder line, fit
+2. COLOR: Intended real-world color (infer from shading density and context, not pencil color)
+3. FABRIC: Intended real-world material and texture (e.g. cotton, silk, wool, denim — NOT crosshatch, hatching, or pencil strokes)
+4. DETAILS: Collar type, placket, paneling, stitching, decorative elements
+5. MOOD: 2-3 style keywords
+
+Output ONLY valid JSON, no markdown formatting, no code block markers:
+{"silhouette": "...", "color": "...", "fabric": "...", "details": "...", "mood": "..."}"""
                         }
                     ],
                 }
@@ -79,7 +89,21 @@ Write as if describing a real garment for a product listing."""
                 if "content" in message and len(message["content"]) > 0:
                     for content_item in message["content"]:
                         if isinstance(content_item, dict) and "text" in content_item:
-                            return content_item.get("text", "")
+                            text = content_item.get("text", "").strip()
+
+                            # Remove markdown code block markers if present
+                            if text.startswith("```json"):
+                                text = text.replace("```json", "", 1).strip()
+                            if text.startswith("```"):
+                                text = text.replace("```", "", 1).strip()
+                            if text.endswith("```"):
+                                text = text[:-3].strip()
+
+                            # Parse JSON
+                            try:
+                                return json.loads(text)
+                            except json.JSONDecodeError as e:
+                                raise ValueError(f"Failed to parse Qwen response as JSON: {text}\nError: {e}")
 
         raise ValueError(f"Unexpected Qwen API response structure: {result}")
 
@@ -87,3 +111,52 @@ Write as if describing a real garment for a product listing."""
         raise RuntimeError(f"Qwen API request failed: {e}")
     except Exception as e:
         raise RuntimeError(f"Failed to extract description from sketch: {e}")
+
+
+def build_flux_prompt(
+    garment_features: Dict[str, str],
+    display_mode: str = "product"
+) -> str:
+    """
+    Assemble FLUX prompt from extracted garment features.
+
+    Args:
+        garment_features: Dict from extract_garment_description with keys:
+                         silhouette, color, fabric, details, mood
+        display_mode: Rendering style (product, on_model, flat_sketch)
+
+    Returns:
+        Complete prompt string optimized for FLUX generation
+    """
+    from core.prompt_builder import DISPLAY_MODES
+
+    # Assemble garment description: silhouette > color > details > fabric > mood (priority order)
+    garment_desc = ", ".join([
+        garment_features.get("silhouette", ""),
+        garment_features.get("color", ""),
+        garment_features.get("details", ""),
+        garment_features.get("fabric", ""),
+        garment_features.get("mood", ""),
+    ])
+
+    # Remove empty segments
+    garment_desc = ", ".join([seg for seg in garment_desc.split(", ") if seg])
+
+    mode_config = DISPLAY_MODES.get(display_mode, DISPLAY_MODES["product"])
+    mode_suffix = ", ".join(mode_config["suffixes"])
+
+    prompt = f"{garment_desc}, {mode_suffix}"
+
+    # Token length optimization: rough estimate (English ~1 word ≈ 1.3 tokens)
+    word_count = len(prompt.split())
+    if word_count > 65:
+        # Remove fabric and mood (lowest priority) if too long
+        garment_desc = ", ".join([
+            garment_features.get("silhouette", ""),
+            garment_features.get("color", ""),
+            garment_features.get("details", ""),
+        ])
+        garment_desc = ", ".join([seg for seg in garment_desc.split(", ") if seg])
+        prompt = f"{garment_desc}, {mode_suffix}"
+
+    return prompt
